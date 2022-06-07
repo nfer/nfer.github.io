@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"nfer.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="小程序真机下会出现canvas metrics 无法获取字体高度的问题，模拟器下表现正常。 背景描述在一个项目下需要在canvas中对一行文本垂直居中展示，以下是一个示例效果：   在模拟器上的表现很正常，但是到了真机上后文本位置出现严重的偏差。验证了iOS设备和Android设备都无法按预期做到垂直居中展示。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="小程序真机下 canvas metrics 无法获取字体高度的问题">
+<meta property="og:url" content="https://nfer.github.io/2022/05/26/miniprogram-canvas-metrics/index.html">
+<meta property="og:site_name" content="Nfer Zhuang&#39;s Blog">
+<meta property="og:description" content="小程序真机下会出现canvas metrics 无法获取字体高度的问题，模拟器下表现正常。 背景描述在一个项目下需要在canvas中对一行文本垂直居中展示，以下是一个示例效果：   在模拟器上的表现很正常，但是到了真机上后文本位置出现严重的偏差。验证了iOS设备和Android设备都无法按预期做到垂直居中展示。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://nfer.github.io/images/miniprogram-canvas-metrics-1.jpg">
+<meta property="og:image" content="https://nfer.github.io/images/miniprogram-canvas-metrics-2.jpg">
+<meta property="og:image" content="https://nfer.github.io/images/miniprogram-canvas-metrics-3.png">
+<meta property="og:image" content="https://nfer.github.io/images/miniprogram-canvas-metrics-4.png">
+<meta property="article:published_time" content="2022-05-25T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-05-25T16:00:00.000Z">
+<meta property="article:author" content="Nfer Zhuang">
+<meta property="article:tag" content="小程序">
+<meta property="article:tag" content="踩坑">
+<meta property="article:tag" content="canvas">
+<meta property="article:tag" content="metrics">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://nfer.github.io/images/miniprogram-canvas-metrics-1.jpg">
+
+<link rel="canonical" href="https://nfer.github.io/2022/05/26/miniprogram-canvas-metrics/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>小程序真机下 canvas metrics 无法获取字体高度的问题 | Nfer Zhuang's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="Nfer Zhuang's Blog" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Nfer Zhuang's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">锋言锋语</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">3</span></a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">7</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://nfer.github.io/2022/05/26/miniprogram-canvas-metrics/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="Nfer Zhuang">
+      <meta itemprop="description" content="锋言锋语的自留地">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Nfer Zhuang's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          小程序真机下 canvas metrics 无法获取字体高度的问题
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-05-26 00:00:00" itemprop="dateCreated datePublished" datetime="2022-05-26T00:00:00+08:00">2022-05-26</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>小程序真机下会出现<code>canvas</code> <code>metrics</code> 无法获取字体高度的问题，模拟器下表现正常。</p>
+<h2 id="背景描述"><a href="#背景描述" class="headerlink" title="背景描述"></a>背景描述</h2><p>在一个项目下需要在<code>canvas</code>中对一行文本垂直居中展示，以下是一个示例效果：</p>
+<img src="/images/miniprogram-canvas-metrics-1.jpg" alt="文本垂直居中展示" style="width:400px;"/>
+
+<p>在模拟器上的表现很正常，但是到了真机上后文本位置出现严重的偏差。验证了iOS设备和Android设备都无法按预期做到垂直居中展示。</p>
+<span id="more"></span>
+
+<h2 id="初步分析"><a href="#初步分析" class="headerlink" title="初步分析"></a>初步分析</h2><p>通过输出<code>metrics</code>返回的值，可以看到模拟器上是可以获取到<code>width</code>和<code>height</code>的，而在真机上只能获取到有效的<code>width</code>，而<code>height</code>的值为0。</p>
+<img src="/images/miniprogram-canvas-metrics-2.jpg" alt="对比效果" style="width:1000px;"/>
+
+<p>所以通过下述代码进行文本绘制时就出现了异常：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> metrics = context.<span class="title function_">measureText</span>(<span class="string">&#x27;中&#x27;</span>);</span><br><span class="line"><span class="keyword">const</span> fontWidth = metrics.<span class="property">width</span>;</span><br><span class="line"><span class="keyword">const</span> fontHeight = metrics.<span class="property">fontBoundingBoxAscent</span>;</span><br><span class="line">context.<span class="title function_">fillText</span>(<span class="string">&#x27;中&#x27;</span>, width / <span class="number">2</span> - fontWidth / <span class="number">2</span>, height / <span class="number">2</span> + fontHeight / <span class="number">2</span>);</span><br></pre></td></tr></table></figure>
+
+<p>在真机上验证，<code>metrics.fontBoundingBoxAscent</code>的返回值是<code>undefined</code>，那么<code>height / 2 + fontHeight / 2</code>的计算结果就是<code>NaN</code>，因此在绘制的时候，就相当于在<code>y</code>轴上绘制在坐标为<code>0</code>的位置。<br>在绘制的时候，为了便于计算居中方便，设置了<code>context.textBaseline = &quot;bottom&quot;;</code>，因此如果在<code>y</code>轴上坐标为<code>0</code>的文字就完全不可见了。</p>
+<p>关于<code>textBaseline</code>的详细说明可以详见：<a target="_blank" rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/textBaseline">MDN</a> 和 <a target="_blank" rel="noopener" href="https://www.w3schools.com/tags/canvas_textbaseline.asp">w3schools</a></p>
+<h2 id="metrics兼容性"><a href="#metrics兼容性" class="headerlink" title="metrics兼容性"></a><code>metrics</code>兼容性</h2><p>印象中，<code>metrics</code>在手机端浏览器的兼容性还是蛮好的，包括 Safari on iOS 和 WebView Android，如下图所示：</p>
+<img src="/images/miniprogram-canvas-metrics-3.png" alt="浏览器兼容性" style="width:800px;"/>
+
+<p>注：这里只截取了使用到的两个属性<code>metrics.width</code>和<code>metrics.fontBoundingBoxAscent</code>。</p>
+<p>从截图上可以看出，<code>metrics.width</code>在很早很早就支持了，而<code>metrics.fontBoundingBoxAscent</code>的支持在各个平台上支持的时间都比较晚。</p>
+<ul>
+<li>chrome 87：发布时间2020年，详见<a target="_blank" rel="noopener" href="https://support.google.com/chrome/a/answer/10314655#87&zippy=%2Cchrome">Chrome Archived release notes</a></li>
+<li>safari 11.3：发布时间2018年，详见<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Safari_version_history">Safari version history</a></li>
+<li>Firefox：默认不支持，需要开启开关后才支持</li>
+<li>IE：完全不支持</li>
+</ul>
+<p>我目前使用的iOS手机上的safari版本是15.4，是完全支持<code>metrics.fontBoundingBoxAscent</code>这个属性的，但是在小程序中仍然也无法获取到字体的高度。</p>
+<p>这就完全超出我的认知和理解了，无奈之下只能联系小程序的开发者。</p>
+<h2 id="官方解答"><a href="#官方解答" class="headerlink" title="官方解答"></a>官方解答</h2><p>以下解答的时间点：2022-05-26</p>
+<blockquote>
+<p>小程序最低是按 chrome 66, safari 10 支持的<br>只能是做这种的最低适配。我们只能保证运行环境不会低于这个版本<br>无法保持一致的，本身运行环境就不同<br>模拟器基于node可以还可以用最新的js语法，但真机上就不一定可以</p>
+</blockquote>
+<h2 id="降级处理"><a href="#降级处理" class="headerlink" title="降级处理"></a>降级处理</h2><p>既然目前(2022-05-26)小程序上无法获取到文本的高度，那么如何进行垂直居中计算呢？</p>
+<p>以下是在 mac chrome 下测试 Helvetica 和 Arial 字体，从 10px 到 100px 分别计算 高度和宽度的比值。</p>
+<table>
+<thead>
+<tr>
+<th align="left">字体</th>
+<th align="center">10px</th>
+<th align="center">20px</th>
+<th align="center">30px</th>
+<th align="center">40px</th>
+<th align="center">50px</th>
+<th align="center">60px</th>
+<th align="center">70px</th>
+<th align="center">80px</th>
+<th align="center">90px</th>
+<th align="center">100px</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">Helvetica</td>
+<td align="center">1.18</td>
+<td align="center">1.08</td>
+<td align="center">1.11</td>
+<td align="center">1.1</td>
+<td align="center">1.12</td>
+<td align="center">1.1</td>
+<td align="center">1.11</td>
+<td align="center">1.1</td>
+<td align="center">1.1</td>
+<td align="center">1.1</td>
+</tr>
+<tr>
+<td align="left">Arial</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.13</td>
+</tr>
+</tbody></table>
+<p>以下是在 mac safari 下测试 Helvetica 和 Arial 字体，从 10px 到 100px 分别计算 高度和宽度的比值。</p>
+<table>
+<thead>
+<tr>
+<th align="left">字体</th>
+<th align="center">10px</th>
+<th align="center">20px</th>
+<th align="center">30px</th>
+<th align="center">40px</th>
+<th align="center">50px</th>
+<th align="center">60px</th>
+<th align="center">70px</th>
+<th align="center">80px</th>
+<th align="center">90px</th>
+<th align="center">100px</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">Helvetica</td>
+<td align="center">1.2</td>
+<td align="center">1.15</td>
+<td align="center">1.16</td>
+<td align="center">1.15</td>
+<td align="center">1.16</td>
+<td align="center">1.15</td>
+<td align="center">1.15</td>
+<td align="center">1.15</td>
+<td align="center">1.15</td>
+<td align="center">1.15</td>
+</tr>
+<tr>
+<td align="left">Arial</td>
+<td align="center">1.1</td>
+<td align="center">1.1</td>
+<td align="center">1.1</td>
+<td align="center">1.1</td>
+<td align="center">1.12</td>
+<td align="center">1.11</td>
+<td align="center">1.11</td>
+<td align="center">1.11</td>
+<td align="center">1.11</td>
+<td align="center">1.12</td>
+</tr>
+</tbody></table>
+<p>以下是在 iOS safari 下测试 Helvetica 和 Arial 字体，从 10px 到 100px 分别计算 高度和宽度的比值。</p>
+<table>
+<thead>
+<tr>
+<th align="left">字体</th>
+<th align="center">10px</th>
+<th align="center">20px</th>
+<th align="center">30px</th>
+<th align="center">40px</th>
+<th align="center">50px</th>
+<th align="center">60px</th>
+<th align="center">70px</th>
+<th align="center">80px</th>
+<th align="center">90px</th>
+<th align="center">100px</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">Helvetica</td>
+<td align="center">1.3</td>
+<td align="center">1.25</td>
+<td align="center">1.2</td>
+<td align="center">1.2</td>
+<td align="center">1.18</td>
+<td align="center">1.18</td>
+<td align="center">1.17</td>
+<td align="center">1.17</td>
+<td align="center">1.16</td>
+<td align="center">1.17</td>
+</tr>
+<tr>
+<td align="left">Arial</td>
+<td align="center">1.3</td>
+<td align="center">1.2</td>
+<td align="center">1.16</td>
+<td align="center">1.15</td>
+<td align="center">1.14</td>
+<td align="center">1.13</td>
+<td align="center">1.12</td>
+<td align="center">1.12</td>
+<td align="center">1.13</td>
+<td align="center">1.13</td>
+</tr>
+</tbody></table>
+<p>详细测试代码详见：<a target="_blank" rel="noopener" href="https://codepen.io/nfer/pen/XWZzvgw?editors=1111">codepen</a></p>
+<p>因此，对于无法获取到<code>metrics.fontBoundingBoxAscent</code>属性值的时候，可以使用<code>metrics.width * 1.15</code>做一个降级处理。</p>
+<p>修改后的代码如下：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">context.<span class="property">font</span> = <span class="string">&#x27;50px Helvetica&#x27;</span>;</span><br><span class="line">context.<span class="property">textBaseline</span> = <span class="string">&quot;bottom&quot;</span>;</span><br><span class="line"><span class="keyword">const</span> metrics = context.<span class="title function_">measureText</span>(<span class="string">&#x27;中&#x27;</span>);</span><br><span class="line"><span class="keyword">const</span> fontWidth = metrics.<span class="property">width</span>;</span><br><span class="line"><span class="keyword">let</span> fontHeight = metrics.<span class="property">fontBoundingBoxAscent</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!fontHeight) &#123;</span><br><span class="line">  fontHeight = fontWidth * <span class="number">1.15</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">context.<span class="title function_">fillText</span>(<span class="string">&#x27;中&#x27;</span>, width / <span class="number">2</span> - fontWidth / <span class="number">2</span>, height / <span class="number">2</span> + fontHeight / <span class="number">2</span>);</span><br></pre></td></tr></table></figure>
+
+<p>最终验证，修改后的代码在小程序上可以“近似”做到垂直居中。</p>
+<img src="/images/miniprogram-canvas-metrics-4.png" alt="文本近似垂直居中展示" style="width:400px;"/>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/%E5%B0%8F%E7%A8%8B%E5%BA%8F/" rel="tag"><i class="fa fa-tag"></i> 小程序</a>
+              <a href="/tags/%E8%B8%A9%E5%9D%91/" rel="tag"><i class="fa fa-tag"></i> 踩坑</a>
+              <a href="/tags/canvas/" rel="tag"><i class="fa fa-tag"></i> canvas</a>
+              <a href="/tags/metrics/" rel="tag"><i class="fa fa-tag"></i> metrics</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/05/17/miniprogram-canvas-z-index/" rel="prev" title="小程序模拟器下 canvas z-index 显示异常的问题">
+      <i class="fa fa-chevron-left"></i> 小程序模拟器下 canvas z-index 显示异常的问题
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/06/07/z-index/" rel="next" title="z-index 跨级不生效">
+      z-index 跨级不生效 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF%E6%8F%8F%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">背景描述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E6%AD%A5%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">初步分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#metrics%E5%85%BC%E5%AE%B9%E6%80%A7"><span class="nav-number">3.</span> <span class="nav-text">metrics兼容性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%98%E6%96%B9%E8%A7%A3%E7%AD%94"><span class="nav-number">4.</span> <span class="nav-text">官方解答</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%99%8D%E7%BA%A7%E5%A4%84%E7%90%86"><span class="nav-number">5.</span> <span class="nav-text">降级处理</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <a href="/about">
+      <img class="site-author-image" itemprop="image" alt="Nfer Zhuang"
+        src="/images/avatar.jpg">
+    </a>
+  <p class="site-author-name" itemprop="name">Nfer Zhuang</p>
+  <div class="site-description" itemprop="description">锋言锋语的自留地</div>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Nfer Zhuang</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
